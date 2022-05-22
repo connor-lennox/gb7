@@ -120,3 +120,21 @@ impl VideoMem for CGBVideoRam {
         self.active_bank = if bank & 0b1 == 1 { 1 } else { 0 }
     }
 }
+
+pub struct Oam {
+    data: [u8; 160],
+}
+
+impl Oam {
+    pub fn read(&self, addr: u16) -> u8 {
+        self.data[addr as usize - 0xFE00]
+    }
+
+    pub fn write(&mut self, addr: u16, val: u8) {
+        self.data[addr as usize - 0xFE00] = val
+    }
+
+    pub fn dma(&mut self, data: &[u8]) {
+        self.data.copy_from_slice(data);
+    }
+}
