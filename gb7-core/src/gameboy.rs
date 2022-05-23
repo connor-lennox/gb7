@@ -1,6 +1,6 @@
 use crate::{
     cartridge::{CartMemory, Cartridge},
-    cpu::{Cpu, CpuFlags, Register, WideRegister},
+    cpu::{Cpu, CpuFlags},
     memory::{HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, OPCODES},
     ppu::Ppu,
@@ -156,7 +156,7 @@ impl Gameboy {
                     self.fetch(),
                     &mut self.cpu.registers.flags,
                 );
-                self.cpu.write_wide_register(&WideRegister::SP, res);
+                self.cpu.sp = res;
                 4
             }
             Opcode::AND(register) => {
