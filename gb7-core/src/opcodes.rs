@@ -75,7 +75,7 @@ pub enum Opcode {
     LDHLDA,                   // Store register A into dereferenced [HL] and decrement HL
     LDAHLD,                   // Store dereferenced [HL] into A and decrement HL
     LDAHLI,                   // Store dereferenced [HL] into A and increment HL
-    LDISP,                    // Load immediate u16 into SP
+    LDISP,                    // Store SP into deferenced immediate u16
     LDHLSP,                   // Add immediate signed byte to SP and store in HL
     LDSPHL,                   // Load register HL into register SP
     LDIOA,                    // Load A into address 0xFF00 + immediate u8

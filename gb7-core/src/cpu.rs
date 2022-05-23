@@ -13,7 +13,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn read_register(&self, register: Register) -> u8 {
+    pub fn read_register(&self, register: &Register) -> u8 {
         match register {
             Register::A => self.registers.a,
             Register::B => self.registers.b,
@@ -26,7 +26,7 @@ impl Cpu {
         }
     }
 
-    pub fn write_register(&mut self, register: Register, val: u8) {
+    pub fn write_register(&mut self, register: &Register, val: u8) {
         match register {
             Register::A => self.registers.a = val,
             Register::B => self.registers.b = val,
@@ -39,7 +39,7 @@ impl Cpu {
         }
     }
 
-    pub fn read_wide_register(&mut self, register: WideRegister) -> u16 {
+    pub fn read_wide_register(&self, register: &WideRegister) -> u16 {
         match register {
             WideRegister::BC => self.registers.bc(),
             WideRegister::DE => self.registers.de(),
@@ -50,7 +50,7 @@ impl Cpu {
         }
     }
 
-    pub fn write_wide_register(&mut self, register: WideRegister, val: u16) {
+    pub fn write_wide_register(&mut self, register: &WideRegister, val: u16) {
         match register {
             WideRegister::BC => self.registers.set_bc(val),
             WideRegister::DE => self.registers.set_de(val),
@@ -59,6 +59,10 @@ impl Cpu {
             WideRegister::SP => self.sp = val,
             WideRegister::PC => self.pc = val,
         }
+    }
+
+    pub fn update_zero_flag(&mut self, val: u8) {
+        self.registers.flags.set(CpuFlags::Z, val == 0);
     }
 }
 
