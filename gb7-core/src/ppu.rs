@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct Ppu {
     mode: PpuMode,
     line_cycles: u32,
@@ -10,4 +11,10 @@ enum PpuMode {
     VBlank,
     OAMScan,
     Drawing,
+}
+
+impl Default for PpuMode {
+    fn default() -> Self {
+        PpuMode::Drawing
+    }
 }

@@ -1,7 +1,7 @@
 use crate::{
     cartridge::{CartMemory, Cartridge},
     cpu::{Cpu, CpuFlags},
-    memory::{HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
+    memory::{GBVideoRam, GBWorkRam, HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, CB_OPCODES, OPCODES},
     ppu::Ppu,
 };
@@ -18,6 +18,19 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
+    pub fn new_dmg(cartridge: Cartridge) -> Self {
+        Gameboy {
+            cpu: Cpu::default(),
+            ppu: Ppu::default(),
+            cartridge,
+            wram: WorkRam::GBWorkRam(GBWorkRam::default()),
+            vram: VideoRam::GBVideoRam(GBVideoRam::default()),
+            oam: Oam::default(),
+            io_regs: IORegs::default(),
+            high_ram: HighRam::default(),
+        }
+    }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7FFF => self.cartridge.read(addr), // Cartridge ROM

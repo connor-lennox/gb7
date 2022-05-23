@@ -17,6 +17,12 @@ pub struct GBWorkRam {
     wram: [u8; 8192],
 }
 
+impl Default for GBWorkRam {
+    fn default() -> Self {
+        Self { wram: [0; 8192] }
+    }
+}
+
 impl WorkMem for GBWorkRam {
     fn read(&self, addr: u16) -> u8 {
         self.wram[(addr - 0xC000) as usize]
@@ -82,6 +88,12 @@ pub struct GBVideoRam {
     vram: [u8; 8192],
 }
 
+impl Default for GBVideoRam {
+    fn default() -> Self {
+        Self { vram: [0; 8192] }
+    }
+}
+
 impl VideoMem for GBVideoRam {
     fn read(&self, addr: u16) -> u8 {
         self.vram[(addr - 0x8000) as usize]
@@ -125,6 +137,12 @@ pub struct Oam {
     data: [u8; 160],
 }
 
+impl Default for Oam {
+    fn default() -> Self {
+        Self { data: [0; 160] }
+    }
+}
+
 impl Oam {
     pub fn read(&self, addr: u16) -> u8 {
         self.data[addr as usize - 0xFE00]
@@ -143,6 +161,12 @@ pub struct IORegs {
     data: [u8; 512],
 }
 
+impl Default for IORegs {
+    fn default() -> Self {
+        Self { data: [0; 512] }
+    }
+}
+
 impl IORegs {
     pub fn read(&self, addr: u16) -> u8 {
         self.data[addr as usize - 0xFF00]
@@ -155,6 +179,12 @@ impl IORegs {
 
 pub struct HighRam {
     data: [u8; 512],
+}
+
+impl Default for HighRam {
+    fn default() -> Self {
+        Self { data: [0; 512] }
+    }
 }
 
 impl HighRam {

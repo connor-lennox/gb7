@@ -1,5 +1,7 @@
 use enum_dispatch::enum_dispatch;
 
+const RAM_SIZES: [usize; 6] = [0, 0, 8192, 32768, 131072, 65536];
+
 #[enum_dispatch(Cartridge)]
 pub trait CartMemory {
     fn read(&self, addr: u16) -> u8;
@@ -10,6 +12,21 @@ pub trait CartMemory {
 pub enum Cartridge {
     NoMBC,
     MBC1,
+}
+
+pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
+    // Build cartridge struct from ROM info
+    let title: &[u8] = &rom[0x0134..0x0143];
+    let licensee_code: &[u8] = &rom[0x0144..0x0145];
+    let cart_type: u8 = rom[0x0147];
+    let rom_size: usize = 0x8000 << rom[0x0148];
+    let ram_size: usize = RAM_SIZES[rom[0x0149] as usize];
+
+    match cart_type {
+        0x00 => Cartridge::NoMBC(NoMBC::new(rom)),
+        0x01..=0x03 => Cartridge::MBC1(MBC1::new(rom, ram_size)),
+        _ => panic!("Invalid cartridge type {}", cart_type),
+    }
 }
 
 pub struct NoMBC {
