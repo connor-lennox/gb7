@@ -1,7 +1,7 @@
 use crate::{
     cartridge::{CartMemory, Cartridge},
     cpu::Cpu,
-    memory::{Oam, VideoMem, VideoRam, WorkMem, WorkRam},
+    memory::{HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     ppu::Ppu,
 };
 
@@ -12,6 +12,8 @@ pub struct Gameboy {
     pub wram: WorkRam,
     pub vram: VideoRam,
     pub oam: Oam,
+    pub io_regs: IORegs,
+    pub high_ram: HighRam,
 }
 
 impl Gameboy {
@@ -24,8 +26,8 @@ impl Gameboy {
             0xE000..=0xFDFF => self.wram.read(addr - 0x2000), // Echo RAM
             0xFE00..=0xFE9F => self.oam.read(addr),       // OAM
             0xFEA0..=0xFEFF => 0xFF,                      // Forbidden Memory
-            0xFF00..=0xFF7F => todo!("io registers"),     // IO Registers
-            0xFF80..=0xFFFF => todo!("high ram"),         // High RAM, Interrupt Enable
+            0xFF00..=0xFF7F => self.io_regs.read(addr),   // IO Registers
+            0xFF80..=0xFFFF => self.high_ram.read(addr),  // High RAM, Interrupt Enable
         }
     }
 
@@ -40,18 +42,19 @@ impl Gameboy {
             0xFEA0..=0xFEFF => (),                              // Forbidden Memory
             0xFF00..=0xFF7F => {
                 // IO Regs
-                // self.ppu.write(addr, value);
-                // if addr == 0xFF46 {
-                //     let mut data: [u8; 160] = [0; 160];
-                //     let value_base = (value as u16) << 8;
-                //     for i in 0x00..=0x9F {
-                //         data[i as usize] = self.read(value_base | i);
-                //     }
-                //     self.ppu.dma(&data);
-                // }
-                todo!("io registers")
+                self.io_regs.write(addr, val);
+
+                // OAM DMA
+                if addr == 0xFF46 {
+                    let mut data: [u8; 160] = [0; 160];
+                    let value_base = (val as u16) << 8;
+                    for i in 0x00..=0x9F {
+                        data[i as usize] = self.read(value_base | i);
+                    }
+                    self.oam.dma(&data);
+                }
             }
-            0xFF80.. => todo!("high ram"), // High RAM, Interrupt Enable Register
+            0xFF80.. => self.high_ram.write(addr, val), // High RAM, Interrupt Enable Register
         }
     }
 

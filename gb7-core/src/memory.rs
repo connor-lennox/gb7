@@ -138,3 +138,31 @@ impl Oam {
         self.data.copy_from_slice(data);
     }
 }
+
+pub struct IORegs {
+    data: [u8; 512],
+}
+
+impl IORegs {
+    pub fn read(&self, addr: u16) -> u8 {
+        self.data[addr as usize - 0xFF00]
+    }
+
+    pub fn write(&mut self, addr: u16, val: u8) {
+        self.data[addr as usize - 0xFF00] = val;
+    }
+}
+
+pub struct HighRam {
+    data: [u8; 512],
+}
+
+impl HighRam {
+    pub fn read(&self, addr: u16) -> u8 {
+        self.data[addr as usize - 0xFF80]
+    }
+
+    pub fn write(&mut self, addr: u16, val: u8) {
+        self.data[addr as usize - 0xFF80] = val;
+    }
+}
