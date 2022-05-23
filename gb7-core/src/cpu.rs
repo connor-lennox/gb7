@@ -61,8 +61,14 @@ impl Cpu {
         }
     }
 
-    pub fn update_zero_flag(&mut self, val: u8) {
-        self.registers.flags.set(CpuFlags::Z, val == 0);
+    pub fn init(&mut self) {
+        // Set the register states to those after the bootrom
+        self.registers.set_af(0x01B0);
+        self.registers.set_bc(0x0013);
+        self.registers.set_de(0x00D8);
+        self.registers.set_hl(0x014D);
+        self.sp = 0xFFFE;
+        self.pc = 0x0100;
     }
 }
 

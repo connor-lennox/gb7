@@ -19,7 +19,7 @@ pub struct Gameboy {
 
 impl Gameboy {
     pub fn new_dmg(cartridge: Cartridge) -> Self {
-        Gameboy {
+        let mut gb = Gameboy {
             cpu: Cpu::default(),
             ppu: Ppu::default(),
             cartridge,
@@ -28,7 +28,13 @@ impl Gameboy {
             oam: Oam::default(),
             io_regs: IORegs::default(),
             high_ram: HighRam::default(),
-        }
+        };
+        gb.init();
+        gb
+    }
+
+    pub fn init(&mut self) {
+        self.cpu.init();
     }
 
     pub fn read(&self, addr: u16) -> u8 {
@@ -109,7 +115,9 @@ impl Gameboy {
 
     fn fetch_word(&mut self) -> u16 {
         // First fetched value is the high byte
-        ((self.fetch() as u16) << 8) | self.fetch() as u16
+        let lo = self.fetch() as u16;
+        let hi = self.fetch() as u16;
+        (hi << 8) | lo
     }
 
     fn execute_opcode(&mut self, opcode: &Opcode) -> u8 {
@@ -926,8 +934,8 @@ impl Gameboy {
         // Increment a u8 value, setting flags as required
         let res = value.wrapping_add(1);
         flags.set(CpuFlags::Z, res == 0);
-        flags.set(CpuFlags::H, (value & 0x0F) == 0);
-        flags.set(CpuFlags::N, true);
+        flags.set(CpuFlags::H, (value & 0x0F) + 1 > 0x0F);
+        flags.set(CpuFlags::N, false);
         res
     }
 
