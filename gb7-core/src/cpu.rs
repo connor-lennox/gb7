@@ -12,6 +12,56 @@ pub struct Cpu {
     pub halted: bool,
 }
 
+impl Cpu {
+    pub fn read_register(&self, register: Register) -> u8 {
+        match register {
+            Register::A => self.registers.a,
+            Register::B => self.registers.b,
+            Register::C => self.registers.c,
+            Register::D => self.registers.d,
+            Register::E => self.registers.e,
+            Register::H => self.registers.h,
+            Register::L => self.registers.l,
+            Register::F => self.registers.flags.bits,
+        }
+    }
+
+    pub fn write_register(&mut self, register: Register, val: u8) {
+        match register {
+            Register::A => self.registers.a = val,
+            Register::B => self.registers.b = val,
+            Register::C => self.registers.c = val,
+            Register::D => self.registers.d = val,
+            Register::E => self.registers.e = val,
+            Register::H => self.registers.h = val,
+            Register::L => self.registers.l = val,
+            Register::F => self.registers.flags.bits = val,
+        }
+    }
+
+    pub fn read_wide_register(&mut self, register: WideRegister) -> u16 {
+        match register {
+            WideRegister::BC => self.registers.bc(),
+            WideRegister::DE => self.registers.de(),
+            WideRegister::HL => self.registers.hl(),
+            WideRegister::AF => self.registers.af(),
+            WideRegister::SP => self.sp,
+            WideRegister::PC => self.pc,
+        }
+    }
+
+    pub fn write_wide_register(&mut self, register: WideRegister, val: u16) {
+        match register {
+            WideRegister::BC => self.registers.set_bc(val),
+            WideRegister::DE => self.registers.set_de(val),
+            WideRegister::HL => self.registers.set_hl(val),
+            WideRegister::AF => self.registers.set_af(val),
+            WideRegister::SP => self.sp = val,
+            WideRegister::PC => self.pc = val,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct CpuRegisters {
     pub a: u8,
@@ -57,6 +107,28 @@ impl CpuRegisters {
         self.a = (value >> 8) as u8;
         self.flags.bits = value as u8;
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum Register {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    F,
+}
+
+#[derive(Clone, Copy)]
+pub enum WideRegister {
+    BC,
+    DE,
+    HL,
+    AF,
+    SP,
+    PC,
 }
 
 bitflags! {
