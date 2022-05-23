@@ -2,7 +2,7 @@ use crate::{
     cartridge::{CartMemory, Cartridge},
     cpu::{Cpu, CpuFlags},
     memory::{HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
-    opcodes::{Opcode, OPCODES},
+    opcodes::{Opcode, CB_OPCODES, OPCODES},
     ppu::Ppu,
 };
 
@@ -66,6 +66,26 @@ impl Gameboy {
     pub fn write_word(&mut self, addr: u16, val: u16) {
         self.write(addr + 1, (val >> 8) as u8);
         self.write(addr, (val & 0xFF) as u8);
+    }
+
+    fn stack_push(&mut self, val: u8) {
+        self.cpu.sp -= 1;
+        self.write(self.cpu.sp, val);
+    }
+
+    fn stack_pop(&mut self) -> u8 {
+        let res = self.read(self.cpu.sp);
+        self.cpu.sp += 1;
+        res
+    }
+
+    fn stack_push_word(&mut self, val: u16) {
+        self.stack_push((val >> 8) as u8);
+        self.stack_push(val as u8);
+    }
+
+    fn stack_pop_word(&mut self) -> u16 {
+        self.stack_pop() as u16 | ((self.stack_pop() as u16) << 8)
     }
 
     fn fetch(&mut self) -> u8 {
@@ -187,10 +207,40 @@ impl Gameboy {
                 Gameboy::do_bit(*bit, value, &mut self.cpu.registers.flags);
                 2
             }
-            Opcode::CALL => todo!(),
-            Opcode::CALLCC(_) => todo!(),
-            Opcode::CALLNCC(_) => todo!(),
-            Opcode::CB => todo!(),
+            Opcode::CALL => {
+                let target = self.fetch_word();
+                self.stack_push_word(self.cpu.pc + 1);
+                self.cpu.pc = target;
+                6
+            }
+            Opcode::CALLCC(condition) => {
+                let target = self.fetch_word();
+                if self.cpu.registers.flags.contains(*condition) {
+                    self.stack_push_word(self.cpu.pc + 1);
+                    self.cpu.pc = target;
+                    6
+                } else {
+                    3
+                }
+            }
+            Opcode::CALLNCC(condition) => {
+                let target = self.fetch_word();
+                if !self.cpu.registers.flags.contains(*condition) {
+                    self.stack_push_word(self.cpu.pc + 1);
+                    self.cpu.pc = target;
+                    6
+                } else {
+                    3
+                }
+            }
+            Opcode::CB => {
+                // Double-length opcodes: grab the next code and use the CB code map to execute
+                let op = self.fetch();
+                let opcode = CB_OPCODES
+                    .get(&op)
+                    .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
+                self.execute_opcode(opcode)
+            }
             Opcode::CCF => {
                 self.cpu.registers.flags.remove(CpuFlags::N);
                 self.cpu.registers.flags.remove(CpuFlags::H);
@@ -233,7 +283,11 @@ impl Gameboy {
                 self.cpu.registers.flags.insert(CpuFlags::H);
                 1
             }
-            Opcode::DAA => todo!(),
+            Opcode::DAA => {
+                self.cpu.registers.a =
+                    Gameboy::do_daa(self.cpu.registers.a, &mut self.cpu.registers.flags);
+                1
+            }
             Opcode::DEC(register) => {
                 let res = Gameboy::do_dec(
                     self.cpu.read_register(register),
@@ -471,8 +525,15 @@ impl Gameboy {
                     Gameboy::do_or(self.cpu.registers.a, rhs, &mut self.cpu.registers.flags);
                 2
             }
-            Opcode::POPWR(_) => todo!(),
-            Opcode::PUSHWR(_) => todo!(),
+            Opcode::POPWR(wide_register) => {
+                let val = self.stack_pop_word();
+                self.cpu.write_wide_register(wide_register, val);
+                3
+            }
+            Opcode::PUSHWR(wide_register) => {
+                self.stack_push_word(self.cpu.read_wide_register(wide_register));
+                4
+            }
             Opcode::RES(bit, register) => {
                 self.cpu.write_register(
                     register,
@@ -485,10 +546,35 @@ impl Gameboy {
                 self.write(self.cpu.registers.hl(), res);
                 4
             }
-            Opcode::RET => todo!(),
-            Opcode::RETCC(_) => todo!(),
-            Opcode::RETNCC(_) => todo!(),
-            Opcode::RETI => todo!(),
+            Opcode::RET => {
+                let target = self.stack_pop_word();
+                self.cpu.pc = target;
+                4
+            }
+            Opcode::RETCC(condition) => {
+                if self.cpu.registers.flags.contains(*condition) {
+                    let target = self.stack_pop_word();
+                    self.cpu.pc = target;
+                    5
+                } else {
+                    2
+                }
+            }
+            Opcode::RETNCC(condition) => {
+                if !self.cpu.registers.flags.contains(*condition) {
+                    let target = self.stack_pop_word();
+                    self.cpu.pc = target;
+                    5
+                } else {
+                    2
+                }
+            }
+            Opcode::RETI => {
+                self.cpu.ime = true;
+                let target = self.stack_pop_word();
+                self.cpu.pc = target;
+                4
+            }
             Opcode::RL(register) => {
                 let res = Gameboy::do_rl(
                     self.cpu.read_register(register),
@@ -955,6 +1041,37 @@ impl Gameboy {
 
         flags.set(CpuFlags::Z, res == 0);
         flags.remove(CpuFlags::N | CpuFlags::H | CpuFlags::C);
+
+        res
+    }
+
+    fn do_daa(value: u8, flags: &mut CpuFlags) -> u8 {
+        // Binary Coded Decimal conversion (applies to A register)
+        let mut res = value;
+
+        if !flags.contains(CpuFlags::N) {
+            // Addition case
+            if flags.contains(CpuFlags::C) || (res > 0x99) {
+                res = res.wrapping_add(0x60);
+                flags.insert(CpuFlags::C);
+            }
+            if flags.contains(CpuFlags::H) || ((res & 0x0f) > 0x09) {
+                res = res.wrapping_add(0x06);
+                flags.insert(CpuFlags::H);
+            }
+        } else {
+            // Subtraction case
+            if flags.contains(CpuFlags::C) {
+                res = res.wrapping_sub(0x60);
+            }
+            if flags.contains(CpuFlags::H) {
+                res = res.wrapping_sub(0x06);
+            }
+        }
+
+        // Reset flags
+        flags.set(CpuFlags::Z, res == 0);
+        flags.remove(CpuFlags::H);
 
         res
     }
