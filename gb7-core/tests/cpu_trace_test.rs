@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, self},
     path::PathBuf,
 };
 
@@ -39,19 +39,65 @@ fn run_blargg_test(test_name: &str) {
     // By polling the serial port after each instruction, we can read out lines and
     // look for some target text that indicates a pass/fail.
 
-    let mut count = 0;
+    let mut line_buffer = String::new();
     loop {
-        // println!("{}", get_log_string(&gameboy));
-
         gameboy.execute();
         // Simulate taking data off the serial bus
         if gameboy.read(0xFF02) == 0x81 {
-            print!("{}", gameboy.read(0xFF01) as char);
+            let new_char = gameboy.read(0xFF01) as char;
+            if new_char == '\n' {
+                if line_buffer == String::from("Passed") {
+                    // Pass case
+                    break;
+                }
+                if !(line_buffer == String::from(test_name)) && line_buffer.len() > 0 {
+                    // Fail case
+                    panic!("Test failed: {}", line_buffer);
+                }
+                // Reset buffer
+                line_buffer = String::new();
+            } else {
+                line_buffer.push(new_char);
+            }
             gameboy.write(0xFF02, 0);
-        }
-        count += 1;
-        if count > 1000000 {
-            break;
         }
     }
 }
+
+// #[test]
+// fn r_imm_log_test() {
+//     let mut log_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+//     log_path.push("resources/blargg/Blargg4.txt");
+//     let ref_file = File::open(log_path).expect("Could not open reference log");
+//     let mut ref_lines = io::BufReader::new(ref_file).lines();
+
+//     let mut cart_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+//     cart_path.push("resources/blargg/04-op r,imm.gb");
+
+//     let cart_data = fs::read(cart_path).unwrap();
+
+//     let cart = cartridge::load_cartridge(&cart_data);
+
+//     let mut gameboy = Gameboy::new_dmg(cart);
+
+//     // Note: LY register (0xFF44) must be stubbed to 0x90!
+
+//     let mut count = 0;
+//     loop {
+//         let log_string = get_log_string(&gameboy);
+//         let ref_op = ref_lines.next();
+
+//         if ref_op.is_none() {
+//             // Finished log
+//             break;
+//         }
+
+//         let ref_string = ref_op.unwrap().unwrap();
+//         if !(log_string == ref_string) {
+//             panic!("reference log mismatch: expected\n{}\nbut got\n{}\n at line {}", ref_string, log_string, count);
+//         }
+
+//         gameboy.execute();
+//         count += 1;
+//     }
+// }
