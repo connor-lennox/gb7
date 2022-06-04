@@ -115,7 +115,7 @@ impl CpuRegisters {
 
     pub fn set_af(&mut self, value: u16) {
         self.a = (value >> 8) as u8;
-        self.flags.bits = value as u8;
+        self.flags.bits = (value & 0b1111_0000) as u8;
     }
 }
 
