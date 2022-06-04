@@ -230,14 +230,14 @@ impl Gameboy {
             }
             Opcode::CALL => {
                 let target = self.fetch_word();
-                self.stack_push_word(self.cpu.pc + 1);
+                self.stack_push_word(self.cpu.pc);
                 self.cpu.pc = target;
                 6
             }
             Opcode::CALLCC(condition) => {
                 let target = self.fetch_word();
                 if self.cpu.registers.flags.contains(*condition) {
-                    self.stack_push_word(self.cpu.pc + 1);
+                    self.stack_push_word(self.cpu.pc);
                     self.cpu.pc = target;
                     6
                 } else {
@@ -247,7 +247,7 @@ impl Gameboy {
             Opcode::CALLNCC(condition) => {
                 let target = self.fetch_word();
                 if !self.cpu.registers.flags.contains(*condition) {
-                    self.stack_push_word(self.cpu.pc + 1);
+                    self.stack_push_word(self.cpu.pc);
                     self.cpu.pc = target;
                     6
                 } else {
@@ -558,12 +558,12 @@ impl Gameboy {
             Opcode::RES(bit, register) => {
                 self.cpu.write_register(
                     register,
-                    Gameboy::do_res(self.cpu.read_register(register), *bit),
+                    Gameboy::do_res(*bit, self.cpu.read_register(register)),
                 );
                 2
             }
             Opcode::RESHL(bit) => {
-                let res = Gameboy::do_res(self.read(self.cpu.registers.hl()), *bit);
+                let res = Gameboy::do_res(*bit, self.read(self.cpu.registers.hl()));
                 self.write(self.cpu.registers.hl(), res);
                 4
             }
@@ -685,6 +685,7 @@ impl Gameboy {
                 1
             }
             Opcode::RST(vector) => {
+                self.stack_push_word(self.cpu.pc);
                 self.cpu.pc = *vector;
                 4
             }
@@ -731,7 +732,7 @@ impl Gameboy {
                 2
             }
             Opcode::SETHL(bit) => {
-                let res = Gameboy::do_set(self.read(self.cpu.registers.hl()), *bit);
+                let res = Gameboy::do_set(*bit, self.read(self.cpu.registers.hl()));
                 self.write(self.cpu.registers.hl(), res);
                 4
             }
@@ -1008,7 +1009,7 @@ impl Gameboy {
         };
         let res = lhs.wrapping_sub(rhs).wrapping_sub(c);
         flags.set(CpuFlags::Z, res == 0);
-        flags.set(CpuFlags::N, false);
+        flags.set(CpuFlags::N, true);
         flags.set(CpuFlags::H, (lhs & 0x0F) < (rhs & 0x0F) + c);
         flags.set(CpuFlags::C, (lhs as u16) < (rhs as u16) + (c as u16));
         res
