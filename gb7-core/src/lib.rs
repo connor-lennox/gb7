@@ -4,3 +4,4 @@ pub mod gameboy;
 pub mod memory;
 mod opcodes;
 pub mod ppu;
+pub mod timers;

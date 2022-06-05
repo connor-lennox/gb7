@@ -3,12 +3,13 @@ use crate::{
     cpu::{Cpu, CpuFlags},
     memory::{GBVideoRam, GBWorkRam, HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, CB_OPCODES, OPCODES},
-    ppu::Ppu,
+    ppu::Ppu, timers::Timers,
 };
 
 pub struct Gameboy {
     pub cpu: Cpu,
     pub ppu: Ppu,
+    pub timers: Timers,
     pub cartridge: Cartridge,
     pub wram: WorkRam,
     pub vram: VideoRam,
@@ -22,6 +23,7 @@ impl Gameboy {
         let mut gb = Gameboy {
             cpu: Cpu::default(),
             ppu: Ppu::default(),
+            timers: Timers::default(),
             cartridge,
             wram: WorkRam::GBWorkRam(GBWorkRam::default()),
             vram: VideoRam::GBVideoRam(GBVideoRam::default()),
@@ -854,7 +856,7 @@ impl Gameboy {
     pub fn execute(&mut self) {
         // Before executing anything, we need to check for CPU interrupts:
         let interrupt = self.check_interrupts();
-        let cycles = match interrupt {
+        let m_cycles = match interrupt {
             Some(interrupt_num) => {
                 self.service_interrupt(interrupt_num);
                 5
@@ -872,7 +874,7 @@ impl Gameboy {
 
         // Tick other components the same number of cycles
         // PPU tick
-        // Timers tick
+        self.timers.tick(&mut self.io_regs, m_cycles)
     }
 
     fn check_interrupts(&self) -> Option<u8> {
