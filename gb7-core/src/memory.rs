@@ -155,6 +155,10 @@ impl Oam {
     pub fn dma(&mut self, data: &[u8]) {
         self.data.copy_from_slice(data);
     }
+
+    pub fn iter_entries(&self) -> impl Iterator<Item = (u8, u8, u8, u8)> + '_ {
+        self.data.chunks_exact(4).map(|c| (c[0], c[1], c[2], c[3]))
+    }
 }
 
 pub struct IORegs {

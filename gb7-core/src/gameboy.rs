@@ -1,6 +1,7 @@
 use crate::{
     cartridge::{CartMemory, Cartridge},
     cpu::{Cpu, CpuFlags},
+    lcd::Lcd,
     memory::{GBVideoRam, GBWorkRam, HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, CB_OPCODES, OPCODES},
     ppu::Ppu,
@@ -10,6 +11,7 @@ use crate::{
 pub struct Gameboy {
     pub cpu: Cpu,
     pub ppu: Ppu,
+    pub lcd: Lcd,
     pub timers: Timers,
     pub cartridge: Cartridge,
     pub wram: WorkRam,
@@ -24,6 +26,7 @@ impl Gameboy {
         let mut gb = Gameboy {
             cpu: Cpu::default(),
             ppu: Ppu::default(),
+            lcd: Lcd::default(),
             timers: Timers::default(),
             cartridge,
             wram: WorkRam::GBWorkRam(GBWorkRam::default()),
@@ -874,7 +877,13 @@ impl Gameboy {
         };
 
         // Tick other components the same number of cycles
-        self.ppu.tick(m_cycles, &self.vram, &self.oam, &mut self.io_regs);
+        self.ppu.tick(
+            m_cycles,
+            &self.vram,
+            &self.oam,
+            &mut self.io_regs,
+            &mut self.lcd,
+        );
         self.timers.tick(&mut self.io_regs, m_cycles)
     }
 
