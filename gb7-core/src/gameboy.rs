@@ -685,8 +685,7 @@ impl Gameboy {
                 1
             }
             Opcode::RST(vector) => {
-                self.stack_push_word(self.cpu.pc);
-                self.cpu.pc = *vector;
+                self.rst(*vector);
                 4
             }
             Opcode::SBC(register) => {
@@ -853,18 +852,50 @@ impl Gameboy {
     }
 
     pub fn execute(&mut self) {
-        // Fetch an opcode and map it to an actual Opcode
-        let op = self.fetch();
-        let opcode = OPCODES
-            .get(&op)
-            .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
-
-        // Execute the opcodes, tracking the cycles used
-        let cycles = self.execute_opcode(opcode);
+        // Before executing anything, we need to check for CPU interrupts:
+        let interrupt = self.check_interrupts();
+        let cycles = match interrupt {
+            Some(interrupt_num) => {
+                self.service_interrupt(interrupt_num);
+                5
+            },
+            None => {
+                // No interrupt, fetch an opcode and map it to an actual Opcode
+                let op = self.fetch();
+                let opcode = OPCODES
+                    .get(&op)
+                    .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
+                // Execute the opcodes, tracking the cycles used
+                self.execute_opcode(opcode)
+            },
+        };
 
         // Tick other components the same number of cycles
         // PPU tick
         // Timers tick
+    }
+
+    fn check_interrupts(&self) -> Option<u8> {
+        let if_reg = self.read(0xFF0F);
+        let interrupts = self.read(0xFFFF) & if_reg;
+
+        match interrupts {
+            0 => None,
+            _ => Some(interrupts.leading_zeros() as u8),
+        }
+    }
+
+    fn service_interrupt(&mut self, interrupt_num: u8) {
+        // Disable IME and IF bit for this interrupt
+        self.cpu.ime = false;
+        self.write(0xFF0F, self.read(0xFF0F) & (!(1 << interrupt_num)));
+
+        self.rst(0x40 + (0x08 * interrupt_num) as u16);
+    }
+
+    fn rst(&mut self, vector: u16) {
+        self.stack_push_word(self.cpu.pc);
+        self.cpu.pc = vector;
     }
 
     fn do_add(lhs: u8, rhs: u8, with_carry: bool, flags: &mut CpuFlags) -> u8 {
