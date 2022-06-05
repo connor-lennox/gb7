@@ -874,7 +874,7 @@ impl Gameboy {
         };
 
         // Tick other components the same number of cycles
-        // PPU tick
+        self.ppu.tick(m_cycles, &self.vram, &self.oam, &mut self.io_regs);
         self.timers.tick(&mut self.io_regs, m_cycles)
     }
 
