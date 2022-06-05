@@ -3,7 +3,8 @@ use crate::{
     cpu::{Cpu, CpuFlags},
     memory::{GBVideoRam, GBWorkRam, HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, CB_OPCODES, OPCODES},
-    ppu::Ppu, timers::Timers,
+    ppu::Ppu,
+    timers::Timers,
 };
 
 pub struct Gameboy {
@@ -860,7 +861,7 @@ impl Gameboy {
             Some(interrupt_num) => {
                 self.service_interrupt(interrupt_num);
                 5
-            },
+            }
             None => {
                 // No interrupt, fetch an opcode and map it to an actual Opcode
                 let op = self.fetch();
@@ -869,7 +870,7 @@ impl Gameboy {
                     .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
                 // Execute the opcodes, tracking the cycles used
                 self.execute_opcode(opcode)
-            },
+            }
         };
 
         // Tick other components the same number of cycles
