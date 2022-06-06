@@ -1,4 +1,4 @@
-use std::{path::Path, fs};
+use std::{fs, path::Path};
 
 use enum_dispatch::enum_dispatch;
 

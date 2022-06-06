@@ -1,8 +1,13 @@
 use std::{env, path::Path, time::Instant};
 
-use gb7_core::{gameboy::Gameboy, cartridge, lcd::Lcd};
-use pixels::{SurfaceTexture, Pixels};
-use winit::{dpi::LogicalSize, window::WindowBuilder, event_loop::{EventLoop, ControlFlow}, event::VirtualKeyCode};
+use gb7_core::{cartridge, gameboy::Gameboy, lcd::Lcd};
+use pixels::{Pixels, SurfaceTexture};
+use winit::{
+    dpi::LogicalSize,
+    event::VirtualKeyCode,
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
 use winit_input_helper::WinitInputHelper;
 
 const WIDTH: u32 = 160;
@@ -15,7 +20,7 @@ fn main() {
     let cartridge = cartridge::load_from_path(&cart_path);
 
     let mut gameboy = Gameboy::new_dmg(cartridge);
-    
+
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
@@ -79,10 +84,9 @@ fn draw_lcd(lcd: &Lcd, frame: &mut [u8]) {
             2 => [100, 100, 100, 255],
             1 => [175, 175, 175, 255],
             0 => [255, 255, 255, 255],
-            _ => panic!("invalid color code")
+            _ => panic!("invalid color code"),
         };
 
         pixel.copy_from_slice(&c);
     }
 }
-
