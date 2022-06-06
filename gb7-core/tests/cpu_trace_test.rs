@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufRead, BufReader, self},
+    io::{self, BufRead, BufReader},
     path::PathBuf,
 };
 
@@ -67,12 +67,12 @@ fn run_blargg_test(test_name: &str) {
 // #[test]
 // fn r_imm_log_test() {
 //     let mut log_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-//     log_path.push("resources/blargg/Blargg4.txt");
+//     log_path.push("resources/blargg/Blargg2.txt");
 //     let ref_file = File::open(log_path).expect("Could not open reference log");
 //     let mut ref_lines = io::BufReader::new(ref_file).lines();
 
 //     let mut cart_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-//     cart_path.push("resources/blargg/04-op r,imm.gb");
+//     cart_path.push("resources/blargg/02-interrupts.gb");
 
 //     let cart_data = fs::read(cart_path).unwrap();
 
@@ -84,20 +84,38 @@ fn run_blargg_test(test_name: &str) {
 
 //     let mut count = 0;
 //     loop {
-//         let log_string = get_log_string(&gameboy);
-//         let ref_op = ref_lines.next();
+        
+//         if !check_interrupts(&gameboy) {
+//             let log_string = get_log_string(&gameboy);
+//             let ref_op = ref_lines.next();
 
-//         if ref_op.is_none() {
-//             // Finished log
-//             break;
-//         }
+//             if ref_op.is_none() {
+//                 // Finished log
+//                 break;
+//             }
 
-//         let ref_string = ref_op.unwrap().unwrap();
-//         if !(log_string == ref_string) {
-//             panic!("reference log mismatch: expected\n{}\nbut got\n{}\n at line {}", ref_string, log_string, count);
+//             let ref_string = ref_op.unwrap().unwrap();
+//             if !(log_string == ref_string) {
+//                 panic!("reference log mismatch: expected\n{}\nbut got\n{}\n at line {}", ref_string, log_string, count);
+//             }
 //         }
 
 //         gameboy.execute();
 //         count += 1;
+
+//         if count == 152481 {
+//             print!("");
+//         }
 //     }
+// }
+
+// fn check_interrupts(gameboy: &Gameboy) -> bool {
+//     if !gameboy.cpu.ime && !gameboy.cpu.halted {
+//         return false;
+//     }
+
+//     let if_reg = gameboy.read(0xFF0F);
+//     let interrupts = gameboy.read(0xFFFF) & if_reg;
+
+//     interrupts != 0
 // }

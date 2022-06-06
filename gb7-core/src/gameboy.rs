@@ -54,6 +54,7 @@ impl Gameboy {
             0xE000..=0xFDFF => self.wram.read(addr - 0x2000), // Echo RAM
             0xFE00..=0xFE9F => self.oam.read(addr),       // OAM
             0xFEA0..=0xFEFF => 0xFF,                      // Forbidden Memory
+            0xFF44 => 0x90,
             0xFF00..=0xFF7F => self.io_regs.read(addr),   // IO Registers
             0xFF80..=0xFFFF => self.high_ram.read(addr),  // High RAM, Interrupt Enable
         }
@@ -346,7 +347,10 @@ impl Gameboy {
                 self.cpu.ime = true;
                 1
             }
-            Opcode::HALT => todo!(),
+            Opcode::HALT => {
+                self.cpu.halted = true;
+                1
+            },
             Opcode::INC(register) => {
                 let res = Gameboy::do_inc(
                     self.cpu.read_register(register),
@@ -862,19 +866,36 @@ impl Gameboy {
     pub fn execute(&mut self) -> u8 {
         // Before executing anything, we need to check for CPU interrupts:
         let interrupt = self.check_interrupts();
-        let m_cycles = match interrupt {
-            Some(interrupt_num) => {
-                self.service_interrupt(interrupt_num);
+
+        if self.cpu.halted && interrupt.is_some() {
+            self.cpu.halted = false;
+        }
+
+        let m_cycles = match (self.cpu.ime, interrupt) {
+            (true, Some(interrupt_num)) => {
+                // IME must be enabled to service an interrupt,
+                // however an interrupt will wake up a HALT regardless.
+                if self.cpu.ime {
+                    self.service_interrupt(interrupt_num);
+                }
                 5
             }
-            None => {
-                // No interrupt, fetch an opcode and map it to an actual Opcode
-                let op = self.fetch();
-                let opcode = OPCODES
-                    .get(&op)
-                    .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
-                // Execute the opcodes, tracking the cycles used
-                self.execute_opcode(opcode)
+            (_, _) => {
+                // No interrupt to service, make sure we aren't halted
+                match self.cpu.halted {
+                    false => {
+                        // No interrupt not halted, fetch an opcode and map it to an actual Opcode
+                        let op = self.fetch();
+                        let opcode = OPCODES
+                            .get(&op)
+                            .unwrap_or_else(|| panic!("Invalid opcode encountered: {}", op));
+                        // Execute the opcodes, tracking the cycles used
+                        self.execute_opcode(opcode)
+                    },
+                    true => {
+                        1
+                    }
+                }
             }
         };
 
@@ -901,16 +922,12 @@ impl Gameboy {
     }
 
     fn check_interrupts(&self) -> Option<u8> {
-        if !self.cpu.ime {
-            return None;
-        }
-
         let if_reg = self.read(0xFF0F);
         let interrupts = self.read(0xFFFF) & if_reg;
 
         match interrupts {
             0 => None,
-            _ => Some(interrupts.leading_zeros() as u8),
+            _ => Some(interrupts.trailing_zeros() as u8),
         }
     }
 
