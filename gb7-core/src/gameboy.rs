@@ -901,6 +901,10 @@ impl Gameboy {
     }
 
     fn check_interrupts(&self) -> Option<u8> {
+        if !self.cpu.ime {
+            return None;
+        }
+
         let if_reg = self.read(0xFF0F);
         let interrupts = self.read(0xFFFF) & if_reg;
 
