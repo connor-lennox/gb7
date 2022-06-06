@@ -21,6 +21,8 @@ pub struct Gameboy {
     pub high_ram: HighRam,
 }
 
+const CYCLES_PER_FRAME: u32 = 70224;
+
 impl Gameboy {
     pub fn new_dmg(cartridge: Cartridge) -> Self {
         let mut gb = Gameboy {
@@ -857,7 +859,7 @@ impl Gameboy {
         }
     }
 
-    pub fn execute(&mut self) {
+    pub fn execute(&mut self) -> u8 {
         // Before executing anything, we need to check for CPU interrupts:
         let interrupt = self.check_interrupts();
         let m_cycles = match interrupt {
@@ -884,7 +886,18 @@ impl Gameboy {
             &mut self.io_regs,
             &mut self.lcd,
         );
-        self.timers.tick(&mut self.io_regs, m_cycles)
+        self.timers.tick(&mut self.io_regs, m_cycles);
+
+        m_cycles
+    }
+
+    pub fn execute_frame(&mut self) {
+        // Execute a single frame worth of opcodes
+        // TODO: Do I need to worry about the few extra frames for sync?
+        let mut cycle_count = 0;
+        while cycle_count < CYCLES_PER_FRAME {
+            cycle_count += self.execute() as u32;
+        }
     }
 
     fn check_interrupts(&self) -> Option<u8> {

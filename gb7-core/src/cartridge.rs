@@ -1,3 +1,5 @@
+use std::{path::Path, fs};
+
 use enum_dispatch::enum_dispatch;
 
 const RAM_SIZES: [usize; 6] = [0, 0, 8192, 32768, 131072, 65536];
@@ -14,12 +16,17 @@ pub enum Cartridge {
     MBC1,
 }
 
+pub fn load_from_path(cart_path: &Path) -> Cartridge {
+    let cart_data = fs::read(cart_path).unwrap();
+    load_cartridge(&cart_data)
+}
+
 pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
     // Build cartridge struct from ROM info
-    let title: &[u8] = &rom[0x0134..0x0143];
-    let licensee_code: &[u8] = &rom[0x0144..0x0145];
+    let _title: &[u8] = &rom[0x0134..0x0143];
+    let _licensee_code: &[u8] = &rom[0x0144..0x0145];
     let cart_type: u8 = rom[0x0147];
-    let rom_size: usize = 0x8000 << rom[0x0148];
+    let _rom_size: usize = 0x8000 << rom[0x0148];
     let ram_size: usize = RAM_SIZES[rom[0x0149] as usize];
 
     match cart_type {

@@ -1,4 +1,5 @@
 [workspace]
 members = [
     "gb7-core",
+    "gb7",
 ]
