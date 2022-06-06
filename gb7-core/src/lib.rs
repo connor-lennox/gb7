@@ -6,3 +6,4 @@ pub mod memory;
 mod opcodes;
 pub mod ppu;
 pub mod timers;
+pub mod joypad;

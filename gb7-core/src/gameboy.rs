@@ -5,13 +5,14 @@ use crate::{
     memory::{GBVideoRam, GBWorkRam, HighRam, IORegs, Oam, VideoMem, VideoRam, WorkMem, WorkRam},
     opcodes::{Opcode, CB_OPCODES, OPCODES},
     ppu::Ppu,
-    timers::Timers,
+    timers::Timers, joypad::Joypad,
 };
 
 pub struct Gameboy {
     pub cpu: Cpu,
     pub ppu: Ppu,
     pub lcd: Lcd,
+    pub joypad: Joypad,
     pub timers: Timers,
     pub cartridge: Cartridge,
     pub wram: WorkRam,
@@ -29,6 +30,7 @@ impl Gameboy {
             cpu: Cpu::default(),
             ppu: Ppu::default(),
             lcd: Lcd::default(),
+            joypad: Joypad::default(),
             timers: Timers::default(),
             cartridge,
             wram: WorkRam::GBWorkRam(GBWorkRam::default()),
@@ -907,6 +909,7 @@ impl Gameboy {
             &mut self.lcd,
         );
         self.timers.tick(&mut self.io_regs, m_cycles);
+        self.joypad.tick(&mut self.io_regs);
 
         m_cycles
     }
