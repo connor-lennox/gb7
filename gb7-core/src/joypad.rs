@@ -1,6 +1,6 @@
 use crate::memory::IORegs;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum JoypadButton {
     Right = 0b0000_0001,
     Left = 0b0000_0010,
@@ -48,7 +48,7 @@ impl Joypad {
 
         // If actions are requested, apply high bits of state
         if action {
-            joyp &= self.state >> 4;
+            joyp &= (self.state >> 4) | 0xF0;
         }
 
         // Write new value to io register

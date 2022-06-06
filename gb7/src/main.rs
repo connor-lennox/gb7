@@ -1,6 +1,6 @@
 use std::{env, path::Path, time::Instant};
 
-use gb7_core::{cartridge, gameboy::Gameboy, lcd::Lcd};
+use gb7_core::{cartridge, gameboy::Gameboy, lcd::Lcd, joypad::JoypadButton};
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::LogicalSize,
@@ -14,6 +14,23 @@ const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 const TARGET_FPS: u32 = 60;
 
+static CONTROLS: [VirtualKeyCode; 8] = [VirtualKeyCode::Z, VirtualKeyCode::X, VirtualKeyCode::Return, VirtualKeyCode::RShift, 
+                    VirtualKeyCode::Left, VirtualKeyCode::Right, VirtualKeyCode::Up, VirtualKeyCode::Down];
+
+fn control(key: VirtualKeyCode) -> JoypadButton {
+    match key {
+        VirtualKeyCode::Z => JoypadButton::A,
+        VirtualKeyCode::X => JoypadButton::B,
+        VirtualKeyCode::Return => JoypadButton::Start,
+        VirtualKeyCode::RShift => JoypadButton::Select,
+        VirtualKeyCode::Left => JoypadButton::Left,
+        VirtualKeyCode::Right => JoypadButton::Right,
+        VirtualKeyCode::Up => JoypadButton::Up,
+        VirtualKeyCode::Down => JoypadButton::Down,
+        _ => unreachable!("invalid control keycode")
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let cart_path = Path::new(&args[1]);
@@ -24,9 +41,9 @@ fn main() {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = LogicalSize::new(WIDTH as f64 * 3f64, HEIGHT as f64 * 3f64);
         WindowBuilder::new()
-            .with_title("RGBL")
+            .with_title("gb7")
             .with_inner_size(size)
             .with_min_inner_size(size)
             .build(&event_loop)
@@ -72,6 +89,16 @@ fn main() {
             if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
                 *control_flow = ControlFlow::Exit;
                 return;
+            }
+
+            // Button press/release
+            for ctr in CONTROLS {
+                if input.key_pressed(ctr) { 
+                    gameboy.joypad.press(control(ctr));
+                }
+                if input.key_released(ctr) { 
+                    gameboy.joypad.release(control(ctr));
+                }
             }
         };
     });
