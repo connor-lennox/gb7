@@ -54,7 +54,6 @@ impl Gameboy {
             0xE000..=0xFDFF => self.wram.read(addr - 0x2000), // Echo RAM
             0xFE00..=0xFE9F => self.oam.read(addr),       // OAM
             0xFEA0..=0xFEFF => 0xFF,                      // Forbidden Memory
-            0xFF44 => 0x90,
             0xFF00..=0xFF7F => self.io_regs.read(addr),   // IO Registers
             0xFF80..=0xFFFF => self.high_ram.read(addr),  // High RAM, Interrupt Enable
         }
