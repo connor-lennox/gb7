@@ -919,7 +919,7 @@ impl Gameboy {
         // TODO: Do I need to worry about the few extra frames for sync?
         let mut cycle_count = 0;
         while cycle_count < CYCLES_PER_FRAME {
-            cycle_count += self.execute() as u32;
+            cycle_count += (self.execute() as u32) * 4;
         }
     }
 
