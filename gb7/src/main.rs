@@ -73,16 +73,6 @@ fn main() {
             return;
         }
 
-        // Wait to conserve framerate
-        let elapsed_time = Instant::now().duration_since(frame_start).as_millis() as u32;
-        let wait_millis = match 1000 / TARGET_FPS >= elapsed_time {
-            true => 1000 / TARGET_FPS - elapsed_time,
-            false => 0,
-        };
-        let new_inst = frame_start + std::time::Duration::from_millis(wait_millis as u64);
-        *control_flow = ControlFlow::WaitUntil(new_inst);
-        frame_start = Instant::now();
-
         // Handle input events
         if input.update(&event) {
             // Close events
@@ -101,6 +91,16 @@ fn main() {
                 }
             }
         };
+
+        // Wait to conserve framerate
+        let elapsed_time = Instant::now().duration_since(frame_start).as_millis() as u32;
+        let wait_millis = match 1000 / TARGET_FPS >= elapsed_time {
+            true => 1000 / TARGET_FPS - elapsed_time,
+            false => 0,
+        };
+        let new_inst = frame_start + std::time::Duration::from_millis(wait_millis as u64);
+        *control_flow = ControlFlow::WaitUntil(new_inst);
+        frame_start = Instant::now();
     });
 }
 
