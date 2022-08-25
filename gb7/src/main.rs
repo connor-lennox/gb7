@@ -1,4 +1,4 @@
-use std::{env, path::Path, time::Instant};
+use std::{env, path::Path, time::{Instant, Duration}};
 
 use gb7_core::{cartridge, gameboy::Gameboy, lcd::Lcd, joypad::JoypadButton};
 use pixels::{Pixels, SurfaceTexture};
@@ -56,9 +56,11 @@ fn main() {
         Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap()
     };
 
-    let mut frame_start = Instant::now();
+    let target_frame_duration: Duration = Duration::from_secs(1) / TARGET_FPS;
 
     event_loop.run(move |event, _, control_flow| {
+        let frame_start = Instant::now();
+
         // Execute one gameboy frame
         gameboy.execute_frame();
 
@@ -93,14 +95,15 @@ fn main() {
         };
 
         // Wait to conserve framerate
-        let elapsed_time = Instant::now().duration_since(frame_start).as_millis() as u32;
-        let wait_millis = match 1000 / TARGET_FPS >= elapsed_time {
-            true => 1000 / TARGET_FPS - elapsed_time,
-            false => 0,
-        };
-        let new_inst = frame_start + std::time::Duration::from_millis(wait_millis as u64);
-        *control_flow = ControlFlow::WaitUntil(new_inst);
-        frame_start = Instant::now();
+        let elapsed_time = frame_start.elapsed();
+        
+        // Show FPS
+        let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
+        window.set_title(format!("gb7 - FPS: {:.2}", fps).as_str());
+
+        if target_frame_duration > elapsed_time {
+            *control_flow = ControlFlow::WaitUntil(frame_start + target_frame_duration);
+        }
     });
 }
 
