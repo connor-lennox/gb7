@@ -291,7 +291,7 @@ impl Ppu {
 
                 // Iterate sprite pixels for this line
                 for px in 0..8 {
-                    if x + px >= 8 {
+                    if x <= 255 - px && x + px >= 8 {
                         let linepos = (x + px - 8) as usize;
                         if linepos > 0 && linepos < 160 {
                             let sprite_pos = if xflip { px } else { 7 - px };
