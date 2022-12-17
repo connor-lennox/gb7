@@ -3,3 +3,4 @@ members = [
     "gb7-core",
     "gb7",
 ]
+resolver = "2"

@@ -8,13 +8,13 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-use winit_input_helper::WinitInputHelper;
+use winit::event::{ElementState, Event, WindowEvent};
 
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 const TARGET_FPS: u32 = 60;
 
-static CONTROLS: [VirtualKeyCode; 8] = [VirtualKeyCode::Z, VirtualKeyCode::X, VirtualKeyCode::Return, VirtualKeyCode::RShift, 
+static CONTROLS: [VirtualKeyCode; 8] = [VirtualKeyCode::Z, VirtualKeyCode::X, VirtualKeyCode::Return, VirtualKeyCode::RShift,
                     VirtualKeyCode::Left, VirtualKeyCode::Right, VirtualKeyCode::Up, VirtualKeyCode::Down];
 
 fn control(key: VirtualKeyCode) -> JoypadButton {
@@ -39,7 +39,6 @@ fn main() {
     let mut gameboy = Gameboy::new_dmg(cartridge);
 
     let event_loop = EventLoop::new();
-    let mut input = WinitInputHelper::new();
     let window = {
         let size = LogicalSize::new(WIDTH as f64 * 3f64, HEIGHT as f64 * 3f64);
         WindowBuilder::new()
@@ -58,14 +57,14 @@ fn main() {
 
     let target_frame_duration: Duration = Duration::from_secs(1) / TARGET_FPS;
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |main_event, _, control_flow| {
         let frame_start = Instant::now();
 
         // Execute one gameboy frame
         gameboy.execute_frame();
 
         // Draw the current frame to screen
-        draw_lcd(&gameboy.lcd, pixels.get_frame());
+        draw_lcd(&gameboy.lcd, pixels.get_frame_mut());
         if pixels
             .render()
             .map_err(|e| panic!("pixels.render() failed: {}", e))
@@ -76,27 +75,31 @@ fn main() {
         }
 
         // Handle input events
-        if input.update(&event) {
-            // Close events
-            if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
-                *control_flow = ControlFlow::Exit;
-                return;
-            }
-
-            // Button press/release
-            for ctr in CONTROLS {
-                if input.key_pressed(ctr) { 
-                    gameboy.joypad.press(control(ctr));
+        match main_event {
+            Event::WindowEvent { ref event, .. } => {
+                match event {
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        if let Some(keycode) = input.virtual_keycode {
+                            if CONTROLS.contains(&keycode) {
+                                match input.state {
+                                    ElementState::Pressed => gameboy.joypad.press(control(keycode)),
+                                    ElementState::Released => gameboy.joypad.release(control(keycode)),
+                                }
+                            }
+                        }
+                    },
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::ExitWithCode(0);
+                    },
+                    _ => (),
                 }
-                if input.key_released(ctr) { 
-                    gameboy.joypad.release(control(ctr));
-                }
-            }
-        };
+            },
+            _ => ()
+        }
 
         // Wait to conserve framerate
         let elapsed_time = frame_start.elapsed();
-        
+
         // Show FPS
         let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
         window.set_title(format!("gb7 - FPS: {:.2}", fps).as_str());
