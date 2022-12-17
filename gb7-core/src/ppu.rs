@@ -252,7 +252,6 @@ impl Ppu {
         oam: &Oam,
         io_regs: &IORegs,
     ) {
-        let mut sprite_line: [u8; 160] = [0; 160];
         let mut priority: [u8; 160] = [0xFF; 160];
 
         let lcdc = io_regs.read(0xFF40);
@@ -302,10 +301,8 @@ impl Ppu {
                             if priority[linepos] > x {
                                 priority[linepos] = x;
 
-                                if color == 0 {
-                                    sprite_line[linepos] = line[linepos];
-                                } else if line[linepos] == 0 || !background_priority {
-                                    sprite_line[linepos] = color;
+                                if line[linepos] == 0 || (!background_priority && px_val != 0) {
+                                    line[linepos] = color;
                                 }
                             }
                         }
@@ -316,13 +313,6 @@ impl Ppu {
             // Only 10 sprites can be drawn on a single scanline
             if buffered_sprites >= 10 {
                 break;
-            }
-        }
-
-        // Apply sprite line to line as needed
-        for linepos in 0..160 {
-            if sprite_line[linepos] != 0 {
-                line[linepos] = sprite_line[linepos];
             }
         }
     }
