@@ -298,10 +298,10 @@ impl Ppu {
                                 | if b2 & (1 << sprite_pos) != 0 { 2 } else { 0 };
                             let color = (sprite_palette >> (px_val * 2)) & 0x3;
 
-                            if priority[linepos] > x {
+                            if priority[linepos] > x && px_val != 0 {
                                 priority[linepos] = x;
 
-                                if line[linepos] == 0 || (!background_priority && px_val != 0) {
+                                if line[linepos] == 0 || !background_priority {
                                     line[linepos] = color;
                                 }
                             }
