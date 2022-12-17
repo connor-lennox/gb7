@@ -31,9 +31,9 @@ pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
     let ram_size: usize = RAM_SIZES[rom[0x0149] as usize];
 
     match cart_type {
-        0x00 => Cartridge::NoMBC(NoMBC::new(rom)),
-        0x01..=0x03 => Cartridge::MBC1(MBC1::new(rom, ram_size)),
-        0x0F..=0x13 => Cartridge::MBC3(MBC3::new(rom, ram_size)),
+        0x00 => NoMBC::new(rom).into(),
+        0x01..=0x03 => MBC1::new(rom, ram_size).into(),
+        0x0F..=0x13 => MBC3::new(rom, ram_size).into(),
         _ => panic!("Invalid cartridge type {}", cart_type),
     }
 }
@@ -147,7 +147,7 @@ impl MBC3 {
     pub fn new(rom: &Vec<u8>, ram_size: usize) -> Self {
         let cartrom: Vec<u8> = rom.to_vec();
         let cartram: Vec<u8> = vec![0; ram_size];
-        let cart: MBC3 = MBC3 {rom_size: cartrom.len(), ram_size, rom: cartrom, ram: cartram, 
+        let cart: MBC3 = MBC3 {rom_size: cartrom.len(), ram_size, rom: cartrom, ram: cartram,
                                 active_rom_bank: 1, active_ram_bank: 0, ram_active: false, banking_mode: false};
         return cart;
     }
