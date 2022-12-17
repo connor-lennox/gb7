@@ -179,7 +179,7 @@ impl Ppu {
 
             // Iterate through tile, setting line as necessary
             for px in 0..8 {
-                if (x_counter * 8 + px) > (scx % 8) as u16 {
+                if (x_counter * 8 + px) >= (scx % 8) as u16 {
                     let linepos = (x_counter * 8 + px - (scx % 8) as u16) as usize;
                     if linepos < 160 {
                         let px_val = if b1 & (1 << 7 - px) != 0 { 1 } else { 0 }
