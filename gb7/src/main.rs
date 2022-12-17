@@ -1,4 +1,5 @@
 use std::{env, path::Path, time::{Instant, Duration}};
+use std::cmp::min;
 
 use gb7_core::{cartridge, gameboy::Gameboy, lcd::Lcd, joypad::JoypadButton};
 use pixels::{Pixels, SurfaceTexture};
@@ -102,7 +103,7 @@ fn main() {
 
         // Show FPS
         let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
-        window.set_title(format!("gb7 - FPS: {:.2}", fps).as_str());
+        window.set_title(format!("gb7 - FPS: {:.2}", min(TARGET_FPS, fps as u32)).as_str());
 
         if target_frame_duration > elapsed_time {
             *control_flow = ControlFlow::WaitUntil(frame_start + target_frame_duration);
