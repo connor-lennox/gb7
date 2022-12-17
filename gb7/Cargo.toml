@@ -7,6 +7,5 @@ edition = "2021"
 
 [dependencies]
 gb7-core = { path = "../gb7-core" }
-pixels = "0.5.0"
-winit = "0.25"
-winit_input_helper = "0.10"
+pixels = "0.10.0"
+winit = "0.27.5"
