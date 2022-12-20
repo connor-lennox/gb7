@@ -1,8 +1,4 @@
-use std::{
-    fs::{self, File},
-    io::{self, BufRead, BufReader},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 
 use test_case::test_case;
 
@@ -29,9 +25,7 @@ fn run_blargg_test(test_name: &str) {
     let mut cart_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     cart_path.push(format!("resources/blargg/{}.gb", test_name));
 
-    let cart_data = fs::read(cart_path).unwrap();
-
-    let cart = cartridge::load_cartridge(&cart_data);
+    let cart = cartridge::load_from_path(&cart_path);
 
     let mut gameboy = Gameboy::new_dmg(cart);
 
@@ -84,7 +78,7 @@ fn run_blargg_test(test_name: &str) {
 
 //     let mut count = 0;
 //     loop {
-        
+
 //         if !check_interrupts(&gameboy) {
 //             let log_string = get_log_string(&gameboy);
 //             let ref_op = ref_lines.next();

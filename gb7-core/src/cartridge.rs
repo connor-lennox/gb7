@@ -1,5 +1,6 @@
 use std::{fs, path::Path};
 use std::fs::{File, OpenOptions};
+use std::path::PathBuf;
 
 use enum_dispatch::enum_dispatch;
 use memmap2::MmapMut;
@@ -21,21 +22,18 @@ pub enum Cartridge {
 
 pub fn load_from_path(cart_path: &Path) -> Cartridge {
     let cart_data = fs::read(cart_path).unwrap();
-    load_cartridge(&cart_data)
-}
 
-pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
     // Build cartridge struct from ROM info
-    let title: &[u8] = &rom[0x0134..0x0143];
-    let _licensee_code: &[u8] = &rom[0x0144..0x0145];
-    let cart_type: u8 = rom[0x0147];
-    let _rom_size: usize = 0x8000 << rom[0x0148];
-    let ram_size: usize = RAM_SIZES[rom[0x0149] as usize];
+    let _title: &[u8] = &cart_data[0x0134..0x0143];
+    let _licensee_code: &[u8] = &cart_data[0x0144..0x0145];
+    let cart_type: u8 = cart_data[0x0147];
+    let _rom_size: usize = 0x8000 << cart_data[0x0148];
+    let ram_size: usize = RAM_SIZES[cart_data[0x0149] as usize];
 
     match cart_type {
-        0x00 => NoMBC::new(rom).into(),
-        0x01..=0x03 => MBC1::new(rom, ram_size).into(),
-        0x0F..=0x13 => MBC3::new(rom, title, ram_size).into(),
+        0x00 => NoMBC::new(&cart_data).into(),
+        0x01..=0x03 => MBC1::new(&cart_data, ram_size).into(),
+        0x0F..=0x13 => MBC3::new(&cart_data, ram_size, cart_path).into(),
         _ => panic!("Invalid cartridge type {}", cart_type),
     }
 }
@@ -146,10 +144,10 @@ pub struct MBC3 {
 }
 
 impl MBC3 {
-    pub fn new(rom: &Vec<u8>, title: &[u8], ram_size: usize) -> Self {
+    pub fn new(rom: &Vec<u8>, ram_size: usize, cart_path: &Path) -> Self {
         let cartrom: Vec<u8> = rom.to_vec();
 
-        let sav = MBC3::get_save_file(title, ram_size);
+        let sav = MBC3::get_save_file(cart_path, ram_size);
         let mmap = unsafe { MmapMut::map_mut(&sav).unwrap() };
 
         let cart: MBC3 = MBC3 {rom_size: cartrom.len(), ram_size, rom: cartrom, ram: mmap,
@@ -157,10 +155,10 @@ impl MBC3 {
         return cart;
     }
 
-    fn get_save_file(title: &[u8], ram_size: usize) -> File {
-        let title_str = String::from_utf8(title.to_vec().into_iter().filter(|c| *c != 0).collect::<Vec<u8>>()).unwrap() + ".sav";
-        let sav_path = Path::new(&title_str);
-        println!("{:?}", sav_path);
+    fn get_save_file(cart_path: &Path, ram_size: usize) -> File {
+        let mut sav_path = PathBuf::from(cart_path);
+        sav_path.set_extension("sav");
+
         let f = OpenOptions::new().read(true).write(true).create(true).open(sav_path).unwrap();
         f.set_len(ram_size as u64).expect("Could not properly set sav file size");
         return f
