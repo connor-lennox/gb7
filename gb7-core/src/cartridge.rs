@@ -1,6 +1,8 @@
 use std::{fs, path::Path};
+use std::fs::{File, OpenOptions};
 
 use enum_dispatch::enum_dispatch;
+use memmap2::MmapMut;
 
 const RAM_SIZES: [usize; 6] = [0, 0, 8192, 32768, 131072, 65536];
 
@@ -24,7 +26,7 @@ pub fn load_from_path(cart_path: &Path) -> Cartridge {
 
 pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
     // Build cartridge struct from ROM info
-    let _title: &[u8] = &rom[0x0134..0x0143];
+    let title: &[u8] = &rom[0x0134..0x0143];
     let _licensee_code: &[u8] = &rom[0x0144..0x0145];
     let cart_type: u8 = rom[0x0147];
     let _rom_size: usize = 0x8000 << rom[0x0148];
@@ -33,7 +35,7 @@ pub fn load_cartridge(rom: &Vec<u8>) -> Cartridge {
     match cart_type {
         0x00 => NoMBC::new(rom).into(),
         0x01..=0x03 => MBC1::new(rom, ram_size).into(),
-        0x0F..=0x13 => MBC3::new(rom, ram_size).into(),
+        0x0F..=0x13 => MBC3::new(rom, title, ram_size).into(),
         _ => panic!("Invalid cartridge type {}", cart_type),
     }
 }
@@ -136,7 +138,7 @@ pub struct MBC3 {
     rom_size: usize,
     ram_size: usize,
     rom: Vec<u8>,
-    ram: Vec<u8>,
+    ram: MmapMut,
     active_rom_bank: usize,
     active_ram_bank: usize,
     ram_active: bool,
@@ -144,12 +146,24 @@ pub struct MBC3 {
 }
 
 impl MBC3 {
-    pub fn new(rom: &Vec<u8>, ram_size: usize) -> Self {
+    pub fn new(rom: &Vec<u8>, title: &[u8], ram_size: usize) -> Self {
         let cartrom: Vec<u8> = rom.to_vec();
-        let cartram: Vec<u8> = vec![0; ram_size];
-        let cart: MBC3 = MBC3 {rom_size: cartrom.len(), ram_size, rom: cartrom, ram: cartram,
+
+        let sav = MBC3::get_save_file(title, ram_size);
+        let mmap = unsafe { MmapMut::map_mut(&sav).unwrap() };
+
+        let cart: MBC3 = MBC3 {rom_size: cartrom.len(), ram_size, rom: cartrom, ram: mmap,
                                 active_rom_bank: 1, active_ram_bank: 0, ram_active: false, banking_mode: false};
         return cart;
+    }
+
+    fn get_save_file(title: &[u8], ram_size: usize) -> File {
+        let title_str = String::from_utf8(title.to_vec().into_iter().filter(|c| *c != 0).collect::<Vec<u8>>()).unwrap() + ".sav";
+        let sav_path = Path::new(&title_str);
+        println!("{:?}", sav_path);
+        let f = OpenOptions::new().read(true).write(true).create(true).open(sav_path).unwrap();
+        f.set_len(ram_size as u64).expect("Could not properly set sav file size");
+        return f
     }
 }
 
@@ -171,11 +185,11 @@ impl CartMemory for MBC3 {
                 if value <= 0x03 {
                     self.active_ram_bank = value as usize;
                 } else {
-                    todo!("implement rtc registers")
+                    // todo!("implement rtc registers")
                 }
             },
             0x6000..=0x7FFF => {
-                todo!("latch rtc register")
+                // todo!("latch rtc register")
             },
             0xA000..=0xBFFF => self.ram[self.active_ram_bank * 16384 + (addr - 0xA000) as usize] = value,
             _ => panic!("Tried to write invalid address on MBC3 cartridge: {}", addr)
