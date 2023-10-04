@@ -59,25 +59,10 @@ fn main() {
     let target_frame_duration: Duration = Duration::from_secs(1) / TARGET_FPS;
 
     event_loop.run(move |main_event, _, control_flow| {
-        let frame_start = Instant::now();
-
-        // Execute one gameboy frame
-        gameboy.execute_frame();
-
-        // Draw the current frame to screen
-        draw_lcd(&gameboy.lcd, pixels.get_frame_mut());
-        if pixels
-            .render()
-            .map_err(|e| panic!("pixels.render() failed: {}", e))
-            .is_err()
-        {
-            *control_flow = ControlFlow::Exit;
-            return;
-        }
-
         // Handle input events
         match main_event {
             Event::WindowEvent { ref event, .. } => {
+                println!("{:?}", event);
                 match event {
                     WindowEvent::KeyboardInput { input, .. } => {
                         if let Some(keycode) = input.virtual_keycode {
@@ -89,24 +74,48 @@ fn main() {
                             }
                         }
                     },
+                    WindowEvent::Resized(size) => {
+                        pixels.resize_surface(size.width, size.height)
+                    }
                     WindowEvent::CloseRequested => {
                         *control_flow = ControlFlow::ExitWithCode(0);
                     },
                     _ => (),
                 }
+                *control_flow = ControlFlow::Poll;
             },
+            Event::MainEventsCleared => {
+                let frame_start = Instant::now();
+
+                // Execute one gameboy frame
+                gameboy.execute_frame();
+
+                // Wait to conserve framerate
+                let elapsed_time = frame_start.elapsed();
+
+                // Show FPS
+                let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
+                window.set_title(format!("gb7 - FPS: {:.2}", min(TARGET_FPS, fps as u32)).as_str());
+
+                if target_frame_duration > elapsed_time {
+                    *control_flow = ControlFlow::WaitUntil(frame_start + target_frame_duration);
+                }
+
+                window.request_redraw()
+            },
+            Event::RedrawRequested(_) => {
+                // Draw the current frame to screen
+                draw_lcd(&gameboy.lcd, pixels.get_frame_mut());
+                if pixels
+                    .render()
+                    .map_err(|e| panic!("pixels.render() failed: {}", e))
+                    .is_err()
+                {
+                    *control_flow = ControlFlow::Exit;
+                    return;
+                }
+            }
             _ => ()
-        }
-
-        // Wait to conserve framerate
-        let elapsed_time = frame_start.elapsed();
-
-        // Show FPS
-        let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
-        window.set_title(format!("gb7 - FPS: {:.2}", min(TARGET_FPS, fps as u32)).as_str());
-
-        if target_frame_duration > elapsed_time {
-            *control_flow = ControlFlow::WaitUntil(frame_start + target_frame_duration);
         }
     });
 }
