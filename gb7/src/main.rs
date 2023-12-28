@@ -56,13 +56,14 @@ fn main() {
         Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap()
     };
 
-    let target_frame_duration: Duration = Duration::from_secs(1) / TARGET_FPS;
+    let active_target_fps: u32 = TARGET_FPS;
+    let target_frame_duration: Duration = Duration::from_secs(1) / active_target_fps;
+    let mut turbo_enabled: bool = false;
 
     event_loop.run(move |main_event, _, control_flow| {
         // Handle input events
         match main_event {
             Event::WindowEvent { ref event, .. } => {
-                println!("{:?}", event);
                 match event {
                     WindowEvent::KeyboardInput { input, .. } => {
                         if let Some(keycode) = input.virtual_keycode {
@@ -70,6 +71,15 @@ fn main() {
                                 match input.state {
                                     ElementState::Pressed => gameboy.joypad.press(control(keycode)),
                                     ElementState::Released => gameboy.joypad.release(control(keycode)),
+                                }
+                            } else if keycode == VirtualKeyCode::Grave {
+                                match input.state {
+                                    ElementState::Pressed => {
+                                        turbo_enabled = true;
+                                    }
+                                    ElementState::Released => {
+                                        turbo_enabled = false;
+                                    }
                                 }
                             }
                         }
@@ -88,14 +98,19 @@ fn main() {
                 let frame_start = Instant::now();
 
                 // Execute one gameboy frame
-                gameboy.execute_frame();
+                match turbo_enabled {
+                    true => (0..10).for_each(|_| gameboy.execute_frame()),
+                    false => gameboy.execute_frame()
+                }
 
                 // Wait to conserve framerate
                 let elapsed_time = frame_start.elapsed();
 
                 // Show FPS
                 let fps = 1e9f64 / (elapsed_time.as_nanos() as f64);
-                window.set_title(format!("gb7 - FPS: {:.2}", min(TARGET_FPS, fps as u32)).as_str());
+
+
+                window.set_title(format!("gb7 - FPS: {:.2}", min(active_target_fps, fps as u32)).as_str());
 
                 if target_frame_duration > elapsed_time {
                     *control_flow = ControlFlow::WaitUntil(frame_start + target_frame_duration);
